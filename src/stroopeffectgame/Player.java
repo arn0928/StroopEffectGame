@@ -3,8 +3,7 @@ package stroopeffectgame;
 import java.io.*;
 
 public class Player implements Serializable {
-    // 版本號更新為 3L，避免與舊存檔衝突導致錯誤
-    private static final long serialVersionUID = 3L; 
+    private static final long serialVersionUID = 4L; // 升級版本號至 4L
     private static final String SAVE_FILE = "savegame.dat";
 
     public int coins = 0;
@@ -15,14 +14,40 @@ public class Player implements Serializable {
     public int skips = 0;
     public boolean hasWaterVideo = false;
     public boolean hasForbiddenJutsu = false;
-    
-    // 新增：白飯吃到飽道具 (無盡模式防扣錢)
     public boolean hasUnlimitedRice = false;
     
     public boolean seenTutorial21 = false;
     public boolean seenTutorial41 = false;
     public boolean seenTutorial61 = false;
     public boolean seenTutorial81 = false;
+
+    // --- 新增：遊戲統計數據結構 ---
+    public static class ModeStats implements Serializable {
+        public double totalPlayTime = 0;
+        public int totalQuestions = 0;
+        public int correctAnswers = 0;
+        public int[] colorCorrect = new int[6]; // 對應6種顏色
+        public int[] colorTotal = new int[6];
+        public double[] colorTime = new double[6];
+        public int reverseCorrect = 0;
+        public int reverseTotal = 0;
+        public double reverseTime = 0;
+    }
+
+    public ModeStats normalStats = new ModeStats();
+    public ModeStats endlessStats = new ModeStats();
+    public ModeStats practiceStats = new ModeStats();
+    public ModeStats multiplayerStats = new ModeStats();
+
+    public ModeStats getModeStats(String mode) {
+        switch(mode) {
+            case "NORMAL": return normalStats;
+            case "ENDLESS": return endlessStats;
+            case "PRACTICE": return practiceStats;
+            case "MULTIPLAYER": return multiplayerStats;
+            default: return normalStats;
+        }
+    }
 
     public boolean spendCoins(int amount) {
         if (coins >= amount) {

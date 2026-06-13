@@ -13,7 +13,6 @@ public class Main {
             UI.clearScreen();
             System.out.println(UI.CYAN + "=== 終端色彩判斷遊戲 ===" + UI.RESET);
             
-            // 使用空白字元對齊右側括號，並為時間、血量、金幣加上專屬顏色
             System.out.println("1. 開始遊戲 (普通模式)       [" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
             
             String contTxt = player.maxSavePoint >= 21 ? "(已解鎖最高至第 " + player.maxSavePoint + " 關)" : "(尚未解鎖)";
@@ -26,7 +25,8 @@ public class Main {
             System.out.println("5. 練習模式                  [不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
             
             System.out.println("6. 遊戲統計");
-            System.out.println("7. 商店系統");
+            // 已將「商店系統」更名為「商店」
+            System.out.println("7. 商店");
             System.out.println("8. 刪除存檔");
             System.out.println("9. 離開並存檔");
             System.out.print("\n請輸入選項: ");
@@ -186,18 +186,28 @@ public class Main {
         while (true) {
             UI.clearScreen();
             System.out.println(UI.YELLOW + "=== 商店 ===" + UI.RESET);
-            System.out.println("持有金幣: " + player.coins);
-            System.out.println("1. 快來拿裝甲包（血量+5，【僅限下一次遊玩生效】）- 20 金幣 " + (player.hasArmor ? "(已裝備)" : ""));
-            System.out.println("2. 全對（按 \\ 通過目前關卡，可用 5 次，【僅限下一次遊玩生效】）- 40 金幣 " + (player.skips > 0 ? "(已裝備 " + player.skips + " 次)" : ""));
-            System.out.println("3. 水影片（初始遊戲時間+20秒，【僅限下一次遊玩生效】）- 50 金幣 " + (player.hasWaterVideo ? "(已裝備)" : ""));
-            if (player.cleared100) System.out.println("4. 白飯吃到飽（無盡模式答錯不扣金幣，【僅限下一次無盡生效】）- 20 金幣 " + (player.hasUnlimitedRice ? "(已裝備)" : ""));
-            else System.out.println(UI.RED + "4. ???（需先通關 100 關解鎖新商品）" + UI.RESET);
+            System.out.println("持有金幣: " + player.coins + "\n");
             
-            if (!player.hasForbiddenJutsu) System.out.println("5. 封印之書（禁術，【永久生效】）- 700 金幣");
-            else System.out.println("5. 封印之書（禁術，【永久生效】）- (已解除封印)");
+            // 使用全形字元與精準的半形空白補位，達成類表格的完美排版
+            System.out.println("1. " + UI.RED + "快來拿裝甲包" + UI.RESET + " | 血量 + 5                    | [單次生效] |  20 金幣 " + (player.hasArmor ? "(已裝備)" : ""));
+            System.out.println("2. " + UI.GREEN + "全對    " + UI.RESET + " | 按 \\ 通過目前關卡(可用 5 次) | [單次生效] |  40 金幣 " + (player.skips > 0 ? "(已裝備 " + player.skips + " 次)" : ""));
+            System.out.println("3. " + UI.YELLOW + "水影片   " + UI.RESET + " | 初始遊戲時間 + 20 秒        | [單次生效] |  50 金幣 " + (player.hasWaterVideo ? "(已裝備)" : ""));
             
-            System.out.println("0. 離開商店");
-            System.out.print("\n請選擇要購買的物品: ");
+            if (player.cleared100) {
+                System.out.println("4. " + UI.WHITE + "白飯吃到飽 " + UI.RESET + " | 無盡模式答錯不扣金幣        | [單次無盡] |  20 金幣 " + (player.hasUnlimitedRice ? "(已裝備)" : ""));
+            } else {
+                System.out.println("4. " + UI.RED + "？？？？？？" + UI.RESET + " | 需先通關 100 關解鎖         | [尚未解鎖] | ??? 金幣");
+            }
+            
+            if (!player.hasForbiddenJutsu) {
+                System.out.println("5. " + UI.PURPLE + "封印之書  " + UI.RESET + " | 時間不再流逝(禁術)          | [永久生效] | 700 金幣");
+            } else {
+                System.out.println("5. " + UI.PURPLE + "封印之書  " + UI.RESET + " | 時間不再流逝(禁術)          | [永久生效] | 700 金幣 (已解除封印)");
+            }
+            
+            System.out.println("\n0. 離開商店");
+            System.out.print("請選擇要購買的物品: ");
+            
             String input = scanner.nextLine().trim();
             if (input.equals("0")) break;
             buyItem(input);

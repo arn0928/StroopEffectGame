@@ -12,7 +12,6 @@ public class Main {
         while (true) {
             UI.clearScreen();
             System.out.println(UI.CYAN + "=== 終端色彩判斷遊戲 ===" + UI.RESET);
-            // 新增金幣獲得提示
             System.out.println(UI.YELLOW + "【金幣規則】普通模式: 答對 +1 | 無盡模式: 答對 +5 / 答錯 -5" + UI.RESET);
             System.out.println("1. 開始遊戲 (從第 1 關開始)");
             
@@ -22,7 +21,9 @@ public class Main {
             String endlessText = player.cleared100 ? "(已開啟)" : "(尚未通關100關)";
             System.out.println("3. 無盡模式 " + endlessText);
             System.out.println("4. 商店系統");
-            System.out.println("5. 離開並存檔");
+            // 將文字修改為單純的刪除存檔
+            System.out.println("5. 刪除存檔");
+            System.out.println("6. 離開並存檔");
             System.out.print("\n請輸入選項: ");
 
             String input = scanner.nextLine().trim();
@@ -50,9 +51,35 @@ public class Main {
                     openShop();
                     break;
                 case "5":
+                    System.out.print(UI.RED + "警告：這將會清除所有遊玩紀錄與金幣！確定要刪除存檔嗎？(y/n): " + UI.RESET);
+                    String confirm = scanner.nextLine().trim().toLowerCase();
+                    if (confirm.equals("y")) {
+                        // 刪除實體檔案
+                        java.io.File file = new java.io.File("savegame.dat");
+                        if (file.exists()) file.delete();
+                        // 將記憶體中的玩家狀態還原為全新狀態
+                        player = new Player(); 
+                        // 修改：刪除完成後提示按 Enter 返回主選單，不再直接開始遊戲
+                        System.out.println(UI.GREEN + "\n存檔已成功刪除！請按 Enter 返回主選單..." + UI.RESET);
+                        scanner.nextLine();
+                    } else {
+                        System.out.println("已取消刪除。請按 Enter 繼續...");
+                        scanner.nextLine();
+                    }
+                    break;
+                case "6":
                     player.save();
                     System.out.println("遊戲已存檔，感謝遊玩！");
                     System.exit(0);
+                    break;
+                case "99":
+                    // 【隱藏測試指令】快速解鎖無盡模式與獲得金幣
+                    player.cleared100 = true;
+                    player.maxSavePoint = 81;
+                    player.coins += 10000; 
+                    player.save();
+                    System.out.println(UI.PURPLE + "\n【開發者密技】已強制解鎖無盡模式、所有存檔點，並獲得 500 金幣！請按 Enter 繼續..." + UI.RESET);
+                    scanner.nextLine();
                     break;
                 default:
                     System.out.println("無效的選項！請按 Enter 繼續...");
@@ -125,14 +152,12 @@ public class Main {
             System.out.println("2. 全對（按 \\ 通過目前關卡，可用 5 次，【僅限下一次遊玩生效】）- 40 金幣 " + (player.skips > 0 ? "(已裝備 " + player.skips + " 次)" : ""));
             System.out.println("3. 水影片（初始遊戲時間+20秒，【僅限下一次遊玩生效】）- 50 金幣 " + (player.hasWaterVideo ? "(已裝備)" : ""));
             
-            // 新商品：白飯吃到飽
             if (player.cleared100) {
                 System.out.println("4. 白飯吃到飽（無盡模式答錯不扣金幣，【僅限下一次無盡生效】）- 20 金幣 " + (player.hasUnlimitedRice ? "(已裝備)" : ""));
             } else {
                 System.out.println(UI.RED + "4. ???（需先通關 100 關解鎖新商品）" + UI.RESET);
             }
             
-            // 封印之書順延為選項 5
             if (!player.hasForbiddenJutsu) {
                 System.out.println("5. 封印之書（禁術，【永久生效】）- 700 金幣");
             } else {

@@ -12,17 +12,19 @@ public class Main {
         while (true) {
             UI.clearScreen();
             System.out.println(UI.CYAN + "=== 終端色彩判斷遊戲 ===" + UI.RESET);
-            System.out.println(UI.YELLOW + "【遊戲說明】多人與練習模式不限時間與血量。" + UI.RESET);
-            System.out.println("1. 開始遊戲 (普通模式) [金幣獎勵: 有]");
+            
+            // 使用空白字元對齊右側括號，並為時間、血量、金幣加上專屬顏色
+            System.out.println("1. 開始遊戲 (普通模式)       [" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
             
             String contTxt = player.maxSavePoint >= 21 ? "(已解鎖最高至第 " + player.maxSavePoint + " 關)" : "(尚未解鎖)";
-            System.out.println("2. 從存檔點繼續 [金幣獎勵: 有] " + contTxt);
+            System.out.println("2. 從存檔點繼續              [" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "] " + contTxt);
             
             String endTxt = player.cleared100 ? "(已開啟)" : "(尚未通關100關)";
-            System.out.println("3. 無盡模式 [金幣獎勵: 有] " + endTxt);
+            System.out.println("3. 無盡模式 (難度全開)       [" + UI.YELLOW + "金幣: 答對+5 / 答錯-5" + UI.RESET + "] " + endTxt);
             
-            System.out.println("4. 練習模式 [金幣獎勵: 無]");
-            System.out.println("5. 多人模式 [金幣獎勵: 無]");
+            System.out.println("4. 多人模式                  [不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
+            System.out.println("5. 練習模式                  [不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
+            
             System.out.println("6. 遊戲統計");
             System.out.println("7. 商店系統");
             System.out.println("8. 刪除存檔");
@@ -40,8 +42,8 @@ public class Main {
                     if (player.cleared100) new Game(player, 1, true, "ENDLESS", null).start();
                     else { System.out.println("必須先通關 100 關！請按 Enter 繼續..."); scanner.nextLine(); }
                     break;
-                case "4": setupCustomGame("PRACTICE"); break;
-                case "5": setupCustomGame("MULTIPLAYER"); break;
+                case "4": setupCustomGame("MULTIPLAYER"); break;
+                case "5": setupCustomGame("PRACTICE"); break;
                 case "6": showStatistics(); break;
                 case "7": openShop(); break;
                 case "8":
@@ -59,6 +61,9 @@ public class Main {
                     System.out.println(UI.PURPLE + "\n【密技】已強制解鎖並獲得金幣！請按 Enter 繼續..." + UI.RESET);
                     scanner.nextLine();
                     break;
+                default:
+                    System.out.println("無效的選項！請按 Enter 繼續...");
+                    scanner.nextLine();
             }
         }
     }
@@ -178,7 +183,6 @@ public class Main {
     }
 
     private static void openShop() {
-        // [商店代碼與上次一致，未做修改以節省長度]
         while (true) {
             UI.clearScreen();
             System.out.println(UI.YELLOW + "=== 商店 ===" + UI.RESET);

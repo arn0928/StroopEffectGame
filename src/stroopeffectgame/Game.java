@@ -8,6 +8,9 @@ public class Game {
     private double remainingTime;
     private double lastTimeDiff = 0.0;
     private int lastCoinGained = 0;
+    
+    // 記錄這局無盡模式是否有白飯吃到飽加持
+    private boolean endlessNoCoinLoss = false;
 
     public Game(Player player, int startLevel, boolean isEndless) {
         this.player = player;
@@ -26,6 +29,13 @@ public class Game {
             player.hasWaterVideo = false;
             usedItem = true;
         }
+        // 僅在無盡模式時消耗白飯吃到飽道具
+        if (isEndless && player.hasUnlimitedRice) {
+            player.hasUnlimitedRice = false;
+            this.endlessNoCoinLoss = true;
+            usedItem = true;
+        }
+        
         if (usedItem) {
             player.save();
         }
@@ -34,8 +44,6 @@ public class Game {
     public void start() {
         while (hp > 0 && (isEndless || currentLevel <= 100)) {
             
-            // --- 判斷是否需要跳出教學提示 ---
-            // 寫在計時開始之前，所以玩家停留在這個畫面時，時間是完全暫停的
             if (currentLevel == 21 && !player.seenTutorial21) {
                 showTutorial(21);
                 player.seenTutorial21 = true;
@@ -70,7 +78,10 @@ public class Game {
                     System.out.printf(UI.YELLOW + "時間: %.2f秒 (%s) " + UI.RESET, remainingTime, timeDiffStr);
                 }
                 
-                System.out.println("| 金幣: " + player.coins + " (+" + lastCoinGained + ")");
+                // 動態處理正負號的顯示
+                String coinDiffStr = lastCoinGained >= 0 ? "+" + lastCoinGained : String.valueOf(lastCoinGained);
+                System.out.println("| 金幣: " + player.coins + " (" + coinDiffStr + ")");
+                
                 System.out.println("--------------------------------------------------");
                 System.out.println("操作: 相同直接按 Enter | 不同按 ' 再按 Enter");
                 System.out.println("功能: 輸入 [ 暫停遊戲 | 輸入 ] 儲存並回主選單" + (player.skips > 0 ? " | 按 \\ 使用全對" : ""));
@@ -143,6 +154,10 @@ public class Game {
             System.out.println(UI.RED + "\n血量歸零，遊戲結束！" + UI.RESET);
         } else if (!isEndless && currentLevel > 100) {
             System.out.println(UI.GREEN + "\n恭喜通關 100 關！無盡模式已開啟！" + UI.RESET);
+            // 解鎖時跳出商店新商品通知
+            if (!player.cleared100) {
+                System.out.println(UI.YELLOW + "【系統通知】商店有新商品可購買！" + UI.RESET);
+            }
             player.cleared100 = true;
         }
         
@@ -152,11 +167,10 @@ public class Game {
         Main.scanner.nextLine();
     }
 
-    // 教學提示畫面渲染邏輯
     private void showTutorial(int level) {
         UI.clearScreen();
-        System.out.println(UI.YELLOW + "---時間倒數暫停---" + UI.RESET);
-        System.out.println(UI.CYAN + "------遊戲提示------" + UI.RESET);
+        System.out.println(UI.CYAN + "---時間倒數暫停---" + UI.RESET);
+        System.out.println(UI.YELLOW + "------遊戲提示------" + UI.RESET);
         System.out.print(UI.RED + "目前狀態: 血量: " + hp + UI.RESET + " | ");
         System.out.printf(UI.YELLOW + "剩餘時間: %.2f秒" + UI.RESET + " | ", remainingTime);
         System.out.println("金幣: " + player.coins);
@@ -169,26 +183,22 @@ public class Game {
             System.out.println(UI.PURPLE + "---！反轉術式！---" + UI.RESET);
             System.out.println("遇到 ！顏色！ 需輸入相反的判斷。");
             
-            // 隨機產生一個按 Enter 的反轉例子 (字與顏色不符合，但因為反轉變成 True)
             String[] words = {"紅", "黃", "藍", "綠", "紫", "粉"};
             String[] fgs = {UI.RED, UI.YELLOW, UI.BLUE, UI.GREEN, UI.PURPLE, UI.PINK};
             java.util.Random rand = new java.util.Random();
             
             int wIdx = rand.nextInt(6);
             int cIdx;
-            do { 
-                cIdx = rand.nextInt(6); 
-            } while(cIdx == wIdx); // 確保文字意義與顏色是不同的
+            do { cIdx = rand.nextInt(6); } while(cIdx == wIdx);
             
             String exampleText = fgs[cIdx] + "！" + words[wIdx] + "！" + UI.RESET;
-            
             System.out.println("例如：" + exampleText + " (顯示為" + words[cIdx] + "色的「" + words[wIdx] + "」字)，需按下Enter");
         } else if (level == 61) {
             System.out.println("【難度提升】視覺干擾！");
             System.out.println("文字後方開始有機率出現隨機背景顏色，請專注文字，不要被背景色干擾判斷！");
         } else if (level == 81) {
             System.out.println("【難度提升】時間緊迫！");
-            System.out.println("通關獎勵時間減少！接下來每通過一關的獎勵時間由+1.8秒 將降為 +1.4 秒。");
+            System.out.println("通關獎勵時間減少！接下來每通過一關的獎勵時間將降為 +2 秒。");
         }
         
         System.out.println("\n按下Enter進入 " + level + " 關");
@@ -218,11 +228,11 @@ public class Game {
         
         double timeReward;
         if (isEndless) {
-            timeReward = 1.4;
+            timeReward = 2.0;
         } else if (currentLevel >= 80) {
-            timeReward = 1.4;
+            timeReward = 2.0;
         } else {
-            timeReward = 1.8;
+            timeReward = 3.0;
         }
 
         if (!player.hasForbiddenJutsu) {
@@ -232,7 +242,8 @@ public class Game {
             lastTimeDiff = 0.0;
         }
 
-        int coinReward = isEndless ? 4 : 1;
+        // 修改無盡模式獎勵為 +5
+        int coinReward = isEndless ? 5 : 1;
         if (!isEndless && (currentLevel == 20 || currentLevel == 40 || currentLevel == 60 || currentLevel == 80 || currentLevel == 100)) {
             coinReward = 10;
         }
@@ -244,7 +255,15 @@ public class Game {
         UI.playWrongEffect();
         hp--;
         lastTimeDiff = 0.0;
-        lastCoinGained = 0;
+        
+        // 修改無盡模式的扣錢機制 (若無白飯吃到飽加持則扣 5 元)
+        if (isEndless && !endlessNoCoinLoss) {
+            int loss = Math.min(5, player.coins); // 避免金幣扣成負數
+            player.coins -= loss;
+            lastCoinGained = -loss;
+        } else {
+            lastCoinGained = 0;
+        }
     }
     
     private void endPlaythrough() {

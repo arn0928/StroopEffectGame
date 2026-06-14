@@ -6,6 +6,7 @@ public class Main {
     public static final Scanner scanner = new Scanner(System.in);
     private static Player player;
     private static final int RIGHT_INFO_COLUMN = 32;
+    private static final int SHOP_EFFECT_COLUMN = 26;
     private static final int SHOP_PRICE_COLUMN = 76;
 
     public static void main(String[] args) {
@@ -18,10 +19,10 @@ public class Main {
             printRightInfoRow("1. 開始遊戲 (普通模式)", "[" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
             
             String contTxt = player.maxSavePoint >= 21 ? "已解鎖最高至第 " + player.maxSavePoint + " 關" : "尚未解鎖";
-            printRightInfoRow("2. 從存檔點繼續", "[" + contTxt + " | " + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
+            printRightInfoRow("2. 從存檔點繼續", "[" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + " | " + contTxt + "]");
             
             String endTxt = player.cleared100 ? "已開啟" : "尚未通關100關";
-            printRightInfoRow("3. 無盡模式 (難度全開)", "[" + endTxt + " | " + UI.YELLOW + "金幣: 答對+5 / 答錯-5" + UI.RESET + "]");
+            printRightInfoRow("3. 無盡模式 (難度全開)", "[" + UI.YELLOW + "金幣: 答對+5 / 答錯-5" + UI.RESET + " | " + endTxt + "]");
             
             System.out.println("4. 商店");
             printRightInfoRow("5. 多人模式", "[不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
@@ -74,7 +75,8 @@ public class Main {
     }
 
     private static void printShopRow(String left, String info, String price) {
-        System.out.println(padRight(left + " " + info, SHOP_PRICE_COLUMN) + UI.YELLOW + price + UI.RESET);
+        String leftColumns = padRight(left, SHOP_EFFECT_COLUMN) + info;
+        System.out.println(padRight(leftColumns, SHOP_PRICE_COLUMN) + UI.YELLOW + price + UI.RESET);
     }
 
     private static String padRight(String text, int width) {

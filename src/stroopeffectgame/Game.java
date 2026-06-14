@@ -13,6 +13,7 @@ public class Game {
     private double lastTimeDiff = 0.0;
     private int lastCoinGained = 0;
     private boolean endlessNoCoinLoss = false;
+    private boolean forbiddenJutsuActive = false;
 
     // --- 本次遊玩的統計變數 ---
     private int qCount = 0;
@@ -79,7 +80,7 @@ public class Game {
                     System.out.println("金幣: " + player.coins + " (無獎勵)");
                 } else {
                     System.out.print(UI.RED + "血量: " + hp + UI.RESET + " | ");
-                    if (player.hasForbiddenJutsu) {
+                    if (forbiddenJutsuActive) {
                         System.out.print(UI.PURPLE + "時間: (時間暫停) " + UI.RESET);
                     } else {
                         String timeDiffStr = String.format("%s%.2f秒", lastTimeDiff >= 0 ? "+" : "", lastTimeDiff);
@@ -91,7 +92,11 @@ public class Game {
                 
                 System.out.println("--------------------------------------------------");
                 System.out.println("操作: 相同直接按 Enter | 不同按 ' 再按 Enter");
-                System.out.println("功能: 輸入 [ 暫停遊戲 | 輸入 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : ""));
+                String functionText = "功能: 輸入 [ 暫停遊戲 | 輸入 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : "");
+                if (player.hasForbiddenJutsu && !noLimits) {
+                    functionText += forbiddenJutsuActive ? " | 封印之書(禁術)已啟動" : " | 輸入 = 啟動封印之書(禁術)";
+                }
+                System.out.println(functionText);
                 System.out.println("--------------------------------------------------\n");
 
                 UI.displayQuestion(q); 
@@ -106,15 +111,38 @@ public class Game {
                         q = new Question(currentLevel, isEndless, random);
                         continue; 
                     } else {
-                        endPlaythrough(); saveRunStats(); printRunStats(); player.save(); return; 
+                        finishRun(); return;
                     }
                 }
                 
                 if (input.equals("]")) {
-                    endPlaythrough(); saveRunStats(); printRunStats(); player.save(); return;
+                    finishRun(); return;
                 }
 
                 double elapsed = (endTime - startTime) / 1000.0;
+
+                if (input.equals("=")) {
+                    if (noLimits) {
+                        System.out.println(UI.PURPLE + "無限制模式不需要啟動封印之書(禁術)。" + UI.RESET);
+                    } else if (!player.hasForbiddenJutsu) {
+                        System.out.println(UI.PURPLE + "尚未購買封印之書(禁術)。" + UI.RESET);
+                    } else if (forbiddenJutsuActive) {
+                        System.out.println(UI.PURPLE + "封印之書(禁術)已經在本輪遊戲中啟動。" + UI.RESET);
+                    } else {
+                        remainingTime -= elapsed;
+                        if (remainingTime <= 0) {
+                            System.out.println(UI.RED_BG + UI.WHITE + " 時間到！遊戲結束。 " + UI.RESET);
+                            finishRun(); return;
+                        }
+                        forbiddenJutsuActive = true;
+                        lastTimeDiff = 0.0;
+                        lastCoinGained = 0;
+                        System.out.println(UI.PURPLE + "封印之書(禁術)啟動！本輪遊戲時間停止流逝。" + UI.RESET);
+                    }
+                    System.out.println("請按 Enter 繼續...");
+                    Main.scanner.nextLine();
+                    continue;
+                }
                 
                 // --- 數據統計紀錄 ---
                 totalPlayTime += elapsed;
@@ -126,13 +154,13 @@ public class Game {
                     reverseTime += elapsed;
                 }
 
-                if (!noLimits && !player.hasForbiddenJutsu) {
+                if (!noLimits && !forbiddenJutsuActive) {
                     remainingTime -= elapsed;
                 }
 
-                if (!noLimits && remainingTime <= 0 && !player.hasForbiddenJutsu) {
+                if (!noLimits && remainingTime <= 0 && !forbiddenJutsuActive) {
                     System.out.println(UI.RED_BG + UI.WHITE + " 時間到！遊戲結束。 " + UI.RESET);
-                    endPlaythrough(); saveRunStats(); printRunStats(); player.save(); return;
+                    finishRun(); return;
                 }
 
                 boolean isTrue = input.equals("");
@@ -172,10 +200,23 @@ public class Game {
             player.cleared100 = true;
         }
         
-        endPlaythrough(); 
+        finishRun();
+    }
+
+    private void finishRun() {
+        endPlaythrough();
         saveRunStats();
-        printRunStats();
+        boolean newlyQualified = revealForbiddenBookIfQualified();
+        printRunStats(newlyQualified);
         player.save();
+    }
+
+    private boolean revealForbiddenBookIfQualified() {
+        if (!player.forbiddenBookRevealed && !player.hasForbiddenJutsu && player.coins >= Player.FORBIDDEN_BOOK_PRICE) {
+            player.forbiddenBookRevealed = true;
+            return true;
+        }
+        return false;
     }
 
     private void saveRunStats() {
@@ -193,7 +234,7 @@ public class Game {
         ms.reverseTime += this.reverseTime;
     }
 
-    private void printRunStats() {
+    private void printRunStats(boolean newlyQualified) {
         UI.clearScreen();
         System.out.println(UI.CYAN + "=== 本次遊玩結果 ===" + UI.RESET);
         
@@ -226,6 +267,11 @@ public class Game {
         double rAcc = reverseTotal > 0 ? (reverseCorrect * 100.0 / reverseTotal) : 0;
         double rAvg = reverseTotal > 0 ? (reverseTime / reverseTotal) : 0;
         System.out.printf("正確率 %d/%d (%.1f%%) | 平均 %.2f 秒\n\n", reverseCorrect, reverseTotal, rAcc, rAvg);
+
+        if (newlyQualified) {
+            System.out.println(UI.PURPLE + "【系統通知】你已有資格購買封印之書(禁術)！" + UI.RESET);
+            System.out.println(UI.YELLOW + "商店中的封印之書效果描述已揭曉。" + UI.RESET + "\n");
+        }
         
         System.out.println("請按 Enter 回到主選單...");
         Main.scanner.nextLine();
@@ -283,7 +329,7 @@ public class Game {
         if (noLimits) return; // 無限制模式不計算獎勵
         
         double timeReward = (isEndless || currentLevel >= 80) ? 2.0 : 3.0;
-        if (!player.hasForbiddenJutsu) { remainingTime += timeReward; lastTimeDiff = timeReward - elapsed; }
+        if (!forbiddenJutsuActive) { remainingTime += timeReward; lastTimeDiff = timeReward - elapsed; }
         else { lastTimeDiff = 0.0; }
 
         int coinReward = isEndless ? 5 : 1;

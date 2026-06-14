@@ -5,6 +5,8 @@ import java.util.Scanner;
 public class Main {
     public static final Scanner scanner = new Scanner(System.in);
     private static Player player;
+    private static final int RIGHT_INFO_COLUMN = 32;
+    private static final int SHOP_PRICE_COLUMN = 76;
 
     public static void main(String[] args) {
         player = Player.load();
@@ -13,20 +15,19 @@ public class Main {
             UI.clearScreen();
             System.out.println(UI.CYAN + "=== 終端色彩判斷遊戲 ===" + UI.RESET);
             
-            System.out.println("1. 開始遊戲 (普通模式)       [" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
+            printRightInfoRow("1. 開始遊戲 (普通模式)", "[" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
             
-            String contTxt = player.maxSavePoint >= 21 ? "(已解鎖最高至第 " + player.maxSavePoint + " 關)" : "(尚未解鎖)";
-            System.out.println("2. 從存檔點繼續              [" + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "] " + contTxt);
+            String contTxt = player.maxSavePoint >= 21 ? "已解鎖最高至第 " + player.maxSavePoint + " 關" : "尚未解鎖";
+            printRightInfoRow("2. 從存檔點繼續", "[" + contTxt + " | " + UI.YELLOW + "金幣: 答對+1" + UI.RESET + "]");
             
-            String endTxt = player.cleared100 ? "(已開啟)" : "(尚未通關100關)";
-            System.out.println("3. 無盡模式 (難度全開)       [" + UI.YELLOW + "金幣: 答對+5 / 答錯-5" + UI.RESET + "] " + endTxt);
+            String endTxt = player.cleared100 ? "已開啟" : "尚未通關100關";
+            printRightInfoRow("3. 無盡模式 (難度全開)", "[" + endTxt + " | " + UI.YELLOW + "金幣: 答對+5 / 答錯-5" + UI.RESET + "]");
             
-            System.out.println("4. 多人模式                  [不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
-            System.out.println("5. 練習模式                  [不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
+            System.out.println("4. 商店");
+            printRightInfoRow("5. 多人模式", "[不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
+            printRightInfoRow("6. 練習模式", "[不限" + UI.CYAN + "時間" + UI.RESET + "與" + UI.RED + "血量" + UI.RESET + " | " + UI.YELLOW + "金幣: 無" + UI.RESET + "]");
             
-            System.out.println("6. 遊戲統計");
-            // 已將「商店系統」更名為「商店」
-            System.out.println("7. 商店");
+            System.out.println("7. 遊戲統計");
             System.out.println("8. 刪除存檔");
             System.out.println("9. 離開並存檔");
             System.out.print("\n請輸入選項: ");
@@ -42,10 +43,10 @@ public class Main {
                     if (player.cleared100) new Game(player, 1, true, "ENDLESS", null).start();
                     else { System.out.println("必須先通關 100 關！請按 Enter 繼續..."); scanner.nextLine(); }
                     break;
-                case "4": setupCustomGame("MULTIPLAYER"); break;
-                case "5": setupCustomGame("PRACTICE"); break;
-                case "6": showStatistics(); break;
-                case "7": openShop(); break;
+                case "4": openShop(); break;
+                case "5": setupCustomGame("MULTIPLAYER"); break;
+                case "6": setupCustomGame("PRACTICE"); break;
+                case "7": showStatistics(); break;
                 case "8":
                     System.out.print(UI.RED + "確定要刪除存檔嗎？(y/n): " + UI.RESET);
                     if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
@@ -57,7 +58,7 @@ public class Main {
                     break;
                 case "9": player.save(); System.out.println("感謝遊玩！"); System.exit(0); break;
                 case "99":
-                    player.cleared100 = true; player.maxSavePoint = 81; player.coins += 500; player.save();
+                    player.cleared100 = true; player.maxSavePoint = 81; player.coins += 10000; player.forbiddenBookRevealed = true; player.save();
                     System.out.println(UI.PURPLE + "\n【密技】已強制解鎖並獲得金幣！請按 Enter 繼續..." + UI.RESET);
                     scanner.nextLine();
                     break;
@@ -66,6 +67,45 @@ public class Main {
                     scanner.nextLine();
             }
         }
+    }
+
+    private static void printRightInfoRow(String left, String right) {
+        System.out.println(padRight(left, RIGHT_INFO_COLUMN) + right);
+    }
+
+    private static void printShopRow(String left, String info, String price) {
+        System.out.println(padRight(left + " " + info, SHOP_PRICE_COLUMN) + UI.YELLOW + price + UI.RESET);
+    }
+
+    private static String padRight(String text, int width) {
+        int padding = width - visibleWidth(text);
+        if (padding <= 0) return text + " ";
+        StringBuilder sb = new StringBuilder(text);
+        for (int i = 0; i < padding; i++) sb.append(' ');
+        return sb.toString();
+    }
+
+    private static int visibleWidth(String text) {
+        String plain = text.replaceAll("\u001B\\[[;\\d]*m", "");
+        int width = 0;
+        for (int i = 0; i < plain.length(); ) {
+            int cp = plain.codePointAt(i);
+            width += isWideCodePoint(cp) ? 2 : 1;
+            i += Character.charCount(cp);
+        }
+        return width;
+    }
+
+    private static boolean isWideCodePoint(int cp) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(cp);
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+            || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+            || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+            || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+            || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
+            || block == Character.UnicodeBlock.HIRAGANA
+            || block == Character.UnicodeBlock.KATAKANA
+            || block == Character.UnicodeBlock.HANGUL_SYLLABLES;
     }
 
     private static void setupCustomGame(String mode) {
@@ -188,21 +228,36 @@ public class Main {
             System.out.println(UI.YELLOW + "=== 商店 ===" + UI.RESET);
             System.out.println("持有金幣: " + player.coins + "\n");
             
-            // 使用全形字元與精準的半形空白補位，達成類表格的完美排版
-            System.out.println("1. " + UI.RED + "快來拿裝甲包" + UI.RESET + " | 血量 + 5                    | [單次生效] |  20 金幣 " + (player.hasArmor ? "(已裝備)" : ""));
-            System.out.println("2. " + UI.GREEN + "全對    " + UI.RESET + " | 按 \\ 通過目前關卡(可用 5 次) | [單次生效] |  40 金幣 " + (player.skips > 0 ? "(已裝備 " + player.skips + " 次)" : ""));
-            System.out.println("3. " + UI.YELLOW + "水影片   " + UI.RESET + " | 初始遊戲時間 + 20 秒        | [單次生效] |  50 金幣 " + (player.hasWaterVideo ? "(已裝備)" : ""));
+            printShopRow("1. " + UI.RED + "快來拿裝甲包" + UI.RESET,
+                "[單次生效 | 血量 +5" + (player.hasArmor ? " | 已裝備" : "") + "]",
+                "20 金幣");
+            printShopRow("2. " + UI.GREEN + "全對" + UI.RESET,
+                "[單次生效 | 按 \\ 通過目前關卡，可用 5 次" + (player.skips > 0 ? " | 已裝備 " + player.skips + " 次" : "") + "]",
+                "40 金幣");
+            printShopRow("3. " + UI.YELLOW + "水影片" + UI.RESET,
+                "[單次生效 | 初始遊戲時間 +20 秒" + (player.hasWaterVideo ? " | 已裝備" : "") + "]",
+                "50 金幣");
             
             if (player.cleared100) {
-                System.out.println("4. " + UI.WHITE + "白飯吃到飽 " + UI.RESET + " | 無盡模式答錯不扣金幣        | [單次無盡] |  20 金幣 " + (player.hasUnlimitedRice ? "(已裝備)" : ""));
+                printShopRow("4. " + UI.WHITE + "白飯吃到飽" + UI.RESET,
+                    "[單次無盡 | 無盡模式答錯不扣金幣" + (player.hasUnlimitedRice ? " | 已裝備" : "") + "]",
+                    "20 金幣");
             } else {
-                System.out.println("4. " + UI.RED + "？？？？？？" + UI.RESET + " | 需先通關 100 關解鎖         | [尚未解鎖] | ??? 金幣");
+                printShopRow("4. " + UI.RED + "？？？？？？" + UI.RESET,
+                    "[尚未解鎖 | 需先通關 100 關]",
+                    "??? 金幣");
             }
             
-            if (!player.hasForbiddenJutsu) {
-                System.out.println("5. " + UI.PURPLE + "封印之書  " + UI.RESET + " | 時間不再流逝(禁術)          | [永久生效] | 700 金幣");
+            boolean showForbiddenBookDetail = player.forbiddenBookRevealed || player.hasForbiddenJutsu;
+            String forbiddenPrice = Player.FORBIDDEN_BOOK_PRICE + " 金幣" + (player.hasForbiddenJutsu ? " (已購買)" : "");
+            if (showForbiddenBookDetail) {
+                printShopRow("5. " + UI.PURPLE + "封印之書(禁術)" + UI.RESET,
+                    "[" + (player.hasForbiddenJutsu ? "已購買" : "可購買") + " | 輸入 = 啟動該輪時間暫停]",
+                    forbiddenPrice);
             } else {
-                System.out.println("5. " + UI.PURPLE + "封印之書  " + UI.RESET + " | 時間不再流逝(禁術)          | [永久生效] | 700 金幣 (已解除封印)");
+                printShopRow("5. " + UI.PURPLE + "封印之書(禁術)" + UI.RESET,
+                    "[效果未揭曉 | 遊戲結束後金幣達標揭曉]",
+                    forbiddenPrice);
             }
             
             System.out.println("\n0. 離開商店");
@@ -211,16 +266,41 @@ public class Main {
             String input = scanner.nextLine().trim();
             if (input.equals("0")) break;
             buyItem(input);
+            System.out.println("請按 Enter 繼續...");
+            scanner.nextLine();
         }
     }
 
     private static void buyItem(String choice) {
         switch (choice) {
-            case "1": if (!player.hasArmor && player.spendCoins(20)) player.hasArmor = true; break;
-            case "2": if (player.spendCoins(40)) player.skips += 5; break;
-            case "3": if (!player.hasWaterVideo && player.spendCoins(50)) player.hasWaterVideo = true; break;
-            case "4": if (player.cleared100) { if (!player.hasUnlimitedRice && player.spendCoins(20)) player.hasUnlimitedRice = true; } break;
-            case "5": if (!player.hasForbiddenJutsu && player.spendCoins(700)) { player.hasForbiddenJutsu = true; } break;
+            case "1":
+                if (player.hasArmor) System.out.println("已裝備裝甲包。");
+                else if (player.spendCoins(20)) player.hasArmor = true;
+                break;
+            case "2":
+                if (player.spendCoins(40)) player.skips += 5;
+                break;
+            case "3":
+                if (player.hasWaterVideo) System.out.println("已裝備水影片。");
+                else if (player.spendCoins(50)) player.hasWaterVideo = true;
+                break;
+            case "4":
+                if (!player.cleared100) System.out.println("需先通關 100 關才能解鎖。");
+                else if (player.hasUnlimitedRice) System.out.println("已裝備白飯吃到飽。");
+                else if (player.spendCoins(20)) player.hasUnlimitedRice = true;
+                break;
+            case "5":
+                if (!player.forbiddenBookRevealed && !player.hasForbiddenJutsu) {
+                    System.out.println("封印之書(禁術)的效果尚未揭曉。");
+                } else if (player.hasForbiddenJutsu) {
+                    System.out.println("已購買封印之書(禁術)。");
+                } else if (player.spendCoins(Player.FORBIDDEN_BOOK_PRICE)) {
+                    player.hasForbiddenJutsu = true;
+                    player.forbiddenBookRevealed = true;
+                }
+                break;
+            default:
+                System.out.println("無效的選項！");
         }
         player.save();
     }

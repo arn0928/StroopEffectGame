@@ -5,6 +5,7 @@ import java.io.*;
 public class Player implements Serializable {
     private static final long serialVersionUID = 4L; // 升級版本號至 4L
     private static final String SAVE_FILE = "savegame.dat";
+    public static final int FORBIDDEN_BOOK_PRICE = 700;
 
     public int coins = 0;
     public int maxSavePoint = 0;
@@ -15,6 +16,7 @@ public class Player implements Serializable {
     public boolean hasWaterVideo = false;
     public boolean hasForbiddenJutsu = false;
     public boolean hasUnlimitedRice = false;
+    public boolean forbiddenBookRevealed = false;
     
     public boolean seenTutorial21 = false;
     public boolean seenTutorial41 = false;

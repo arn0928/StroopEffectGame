@@ -38,7 +38,7 @@ public class UI {
         try {
             System.out.print("\007");
             clearScreen();
-            System.out.println("\n\n\n\n           " + GREEN_BG + WHITE + "\n\n   O 正確！ O   \n\n" + RESET);
+            System.out.println("\n\n\n\n" + GREEN_BG + WHITE + "\n\n    O  正確！ O    \n\n" + RESET);
             Thread.sleep(160);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -49,7 +49,7 @@ public class UI {
         try {
             System.out.print("\007");
             clearScreen();
-            System.out.println("\n\n\n\n           " + RED_BG + WHITE + "\n\n   X 錯誤！ X   \n\n" + RESET);
+            System.out.println("\n\n\n\n" + RED_BG + WHITE + "\n\n    X  錯誤！ X    \n\n" + RESET);
             Thread.sleep(280);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

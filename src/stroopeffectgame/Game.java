@@ -239,7 +239,6 @@ public class Game {
 
     private void printRunStats(boolean newlyQualified) {
         UI.clearScreen();
-        System.out.println(UI.CYAN + "=== 本次遊玩結果 ===" + UI.RESET);
 
         String modeName = "";
         switch(mode) {
@@ -253,6 +252,7 @@ public class Game {
         String coinChangeStr = totalCoinChange >= 0 ? "+" + totalCoinChange : String.valueOf(totalCoinChange);
 
         String[] resultLines = {
+            UI.CYAN + "=== 本次遊玩結果 ===" + UI.RESET,
             String.format("遊玩模式: %s", modeName),
             String.format("生存關卡: 第 %d 關", currentLevel > 100 && !isEndless ? 100 : currentLevel - 1),
             String.format("遊玩時間: %.2f 秒", totalPlayTime),

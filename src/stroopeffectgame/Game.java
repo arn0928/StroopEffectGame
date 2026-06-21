@@ -12,6 +12,7 @@ public class Game {
     private double remainingTime;
     private double lastTimeDiff = 0.0;
     private int lastCoinGained = 0;
+    private int totalCoinChange = 0;
     private boolean endlessNoCoinLoss = false;
     private boolean forbiddenJutsuActive = false;
 
@@ -234,10 +235,12 @@ public class Game {
         ms.reverseTime += this.reverseTime;
     }
 
+    private static final int RESULT_LEFT_COLUMN = 32;
+
     private void printRunStats(boolean newlyQualified) {
         UI.clearScreen();
         System.out.println(UI.CYAN + "=== 本次遊玩結果 ===" + UI.RESET);
-        
+
         String modeName = "";
         switch(mode) {
             case "NORMAL": modeName = "普通模式"; break;
@@ -245,35 +248,50 @@ public class Game {
             case "MULTIPLAYER": modeName = "多人模式"; break;
             case "PRACTICE": modeName = "練習模式"; break;
         }
-        
-        System.out.printf("遊玩模式: %s\n", modeName);
-        System.out.printf("生存關卡: 第 %d 關\n", currentLevel > 100 && !isEndless ? 100 : currentLevel - 1);
-        System.out.printf("遊玩時間: %.2f 秒\n", totalPlayTime);
-        
+
         double acc = qCount > 0 ? (correctCount * 100.0 / qCount) : 0;
-        System.out.printf("總正確率: %d/%d (%.1f%%)\n\n", correctCount, qCount, acc);
-        
-        System.out.println(UI.YELLOW + "--- 各顏色統計 ---" + UI.RESET);
+        String coinChangeStr = totalCoinChange >= 0 ? "+" + totalCoinChange : String.valueOf(totalCoinChange);
+
+        String[] resultLines = {
+            String.format("遊玩模式: %s", modeName),
+            String.format("生存關卡: 第 %d 關", currentLevel > 100 && !isEndless ? 100 : currentLevel - 1),
+            String.format("遊玩時間: %.2f 秒", totalPlayTime),
+            "目前金幣: " + UI.YELLOW + player.coins + UI.RESET + " (" + UI.YELLOW + coinChangeStr + UI.RESET + ")",
+            String.format("總正確率: %d/%d (%.1f%%)", correctCount, qCount, acc)
+        };
+
         String[] colorNames = {"紅", "黃", "藍", "綠", "紫", "粉"};
         String[] colorCodes = {UI.RED, UI.YELLOW, UI.BLUE, UI.GREEN, UI.PURPLE, UI.PINK};
-        for(int i=0; i<6; i++) {
-            double cAcc = colorTotal[i] > 0 ? (colorCorrect[i] * 100.0 / colorTotal[i]) : 0;
-            double cAvg = colorTotal[i] > 0 ? (colorTime[i] / colorTotal[i]) : 0;
-            System.out.printf("%s%s%s: 正確率 %d/%d (%.1f%%) | 平均 %.2f 秒\n", 
-                colorCodes[i], colorNames[i], UI.RESET, colorCorrect[i], colorTotal[i], cAcc, cAvg);
-        }
-        
-        System.out.println(UI.PURPLE + "\n--- 反轉術式 (!) 統計 ---" + UI.RESET);
         double rAcc = reverseTotal > 0 ? (reverseCorrect * 100.0 / reverseTotal) : 0;
         double rAvg = reverseTotal > 0 ? (reverseTime / reverseTotal) : 0;
-        System.out.printf("正確率 %d/%d (%.1f%%) | 平均 %.2f 秒\n\n", reverseCorrect, reverseTotal, rAcc, rAvg);
+
+        String[] statLines = new String[9];
+        statLines[0] = UI.YELLOW + "--- 各顏色統計 ---" + UI.RESET;
+        for (int i = 0; i < 6; i++) {
+            double cAcc = colorTotal[i] > 0 ? (colorCorrect[i] * 100.0 / colorTotal[i]) : 0;
+            double cAvg = colorTotal[i] > 0 ? (colorTime[i] / colorTotal[i]) : 0;
+            statLines[i + 1] = String.format("%s%s%s: 正確率 %d/%d (%.1f%%) | 平均 %.2f 秒",
+                colorCodes[i], colorNames[i], UI.RESET, colorCorrect[i], colorTotal[i], cAcc, cAvg);
+        }
+        statLines[7] = UI.PURPLE + "--- 反轉術式 (!) 統計 ---" + UI.RESET;
+        statLines[8] = String.format("正確率 %d/%d (%.1f%%) | 平均 %.2f 秒", reverseCorrect, reverseTotal, rAcc, rAvg);
+
+        int rowCount = Math.max(resultLines.length, statLines.length);
+        for (int i = 0; i < rowCount; i++) {
+            String left = i < resultLines.length ? resultLines[i] : "";
+            String right = i < statLines.length ? statLines[i] : "";
+            System.out.println(UI.padRight(left, RESULT_LEFT_COLUMN) + right);
+        }
+        System.out.println();
 
         if (newlyQualified) {
             System.out.println(UI.PURPLE + "【系統通知】你已有資格購買封印之書(禁術)！" + UI.RESET);
             System.out.println(UI.YELLOW + "商店中的封印之書效果描述已揭曉。" + UI.RESET + "\n");
         }
-        
-        System.out.println("請按 Enter 回到主選單...");
+
+        System.out.println("請按 Enter 繼續...");
+        Main.scanner.nextLine();
+        System.out.println("再按一次 Enter 返回主選單...");
         Main.scanner.nextLine();
     }
 
@@ -335,6 +353,7 @@ public class Game {
         int coinReward = isEndless ? 5 : 1;
         if (!isEndless && (currentLevel == 20 || currentLevel == 40 || currentLevel == 60 || currentLevel == 80 || currentLevel == 100)) coinReward = 10;
         player.coins += coinReward; lastCoinGained = coinReward;
+        totalCoinChange += coinReward;
     }
 
     private void handleWrong() {
@@ -345,6 +364,7 @@ public class Game {
         if (isEndless && !endlessNoCoinLoss) {
             int loss = Math.min(5, player.coins);
             player.coins -= loss; lastCoinGained = -loss;
+            totalCoinChange -= loss;
         } else { lastCoinGained = 0; }
     }
     

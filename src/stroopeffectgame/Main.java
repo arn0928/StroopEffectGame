@@ -71,43 +71,12 @@ public class Main {
     }
 
     private static void printRightInfoRow(String left, String right) {
-        System.out.println(padRight(left, RIGHT_INFO_COLUMN) + right);
+        System.out.println(UI.padRight(left, RIGHT_INFO_COLUMN) + right);
     }
 
     private static void printShopRow(String left, String info, String price) {
-        String leftColumns = padRight(left, SHOP_EFFECT_COLUMN) + info;
-        System.out.println(padRight(leftColumns, SHOP_PRICE_COLUMN) + UI.YELLOW + price + UI.RESET);
-    }
-
-    private static String padRight(String text, int width) {
-        int padding = width - visibleWidth(text);
-        if (padding <= 0) return text + " ";
-        StringBuilder sb = new StringBuilder(text);
-        for (int i = 0; i < padding; i++) sb.append(' ');
-        return sb.toString();
-    }
-
-    private static int visibleWidth(String text) {
-        String plain = text.replaceAll("\u001B\\[[;\\d]*m", "");
-        int width = 0;
-        for (int i = 0; i < plain.length(); ) {
-            int cp = plain.codePointAt(i);
-            width += isWideCodePoint(cp) ? 2 : 1;
-            i += Character.charCount(cp);
-        }
-        return width;
-    }
-
-    private static boolean isWideCodePoint(int cp) {
-        Character.UnicodeBlock block = Character.UnicodeBlock.of(cp);
-        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
-            || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
-            || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
-            || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
-            || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
-            || block == Character.UnicodeBlock.HIRAGANA
-            || block == Character.UnicodeBlock.KATAKANA
-            || block == Character.UnicodeBlock.HANGUL_SYLLABLES;
+        String leftColumns = UI.padRight(left, SHOP_EFFECT_COLUMN) + info;
+        System.out.println(UI.padRight(leftColumns, SHOP_PRICE_COLUMN) + UI.YELLOW + price + UI.RESET);
     }
 
     private static void setupCustomGame(String mode) {

@@ -19,6 +19,37 @@ public class UI {
     public static final String PURPLE_BG = "\u001B[45m";
     public static final String PINK_BG = "\u001B[48;5;206m";
 
+    public static String padRight(String text, int width) {
+        int padding = width - visibleWidth(text);
+        if (padding <= 0) return text + " ";
+        StringBuilder sb = new StringBuilder(text);
+        for (int i = 0; i < padding; i++) sb.append(' ');
+        return sb.toString();
+    }
+
+    public static int visibleWidth(String text) {
+        String plain = text.replaceAll("\\[[;\\d]*m", "");
+        int width = 0;
+        for (int i = 0; i < plain.length(); ) {
+            int cp = plain.codePointAt(i);
+            width += isWideCodePoint(cp) ? 2 : 1;
+            i += Character.charCount(cp);
+        }
+        return width;
+    }
+
+    private static boolean isWideCodePoint(int cp) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(cp);
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+            || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+            || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+            || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+            || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
+            || block == Character.UnicodeBlock.HIRAGANA
+            || block == Character.UnicodeBlock.KATAKANA
+            || block == Character.UnicodeBlock.HANGUL_SYLLABLES;
+    }
+
     public static void clearScreen() {
         System.out.print("\033[H\033[2J");
         System.out.flush();

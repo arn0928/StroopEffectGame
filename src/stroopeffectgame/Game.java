@@ -1,13 +1,19 @@
 package stroopeffectgame;
 
+/**
+ * 控制單局遊戲的完整流程：逐關出題、讀取玩家輸入、判斷對錯、
+ * 套用道具效果，並於遊戲結束後彙整統計數據與顯示結算畫面。
+ */
 public class Game {
+    // 遊戲基本設定
     private Player player;
     private int currentLevel;
     private boolean isEndless;
     private String mode;
-    private boolean noLimits; // 練習/多人模式無限制
+    private boolean noLimits; // 練習模式與多人模式不計血量、時間與金幣增減
     private java.util.Random random;
-    
+
+    // 本局即時狀態
     private int hp;
     private double remainingTime;
     private double lastTimeDiff = 0.0;
@@ -16,7 +22,7 @@ public class Game {
     private boolean endlessNoCoinLoss = false;
     private boolean forbiddenJutsuActive = false;
 
-    // --- 本次遊玩的統計變數 ---
+    // 本局統計數據，遊戲結束後會併入玩家存檔的歷史統計
     private int qCount = 0;
     private int correctCount = 0;
     private int[] colorCorrect = new int[6];
@@ -27,24 +33,33 @@ public class Game {
     private double reverseTime = 0;
     private double totalPlayTime = 0;
 
+    /**
+     * 建立一局新遊戲，並依玩家持有的道具套用初始狀態。
+     *
+     * @param player     玩家存檔資料，遊戲過程中會直接修改其欄位
+     * @param startLevel 起始關卡
+     * @param isEndless  是否套用無盡模式規則
+     * @param mode       遊戲模式代稱，用於存檔分類與規則判斷
+     * @param seed       多人模式使用的同步種子碼；其餘模式可傳入 null
+     */
     public Game(Player player, int startLevel, boolean isEndless, String mode, Long seed) {
         this.player = player;
         this.currentLevel = startLevel;
         this.isEndless = isEndless;
         this.mode = mode;
         this.noLimits = mode.equals("PRACTICE") || mode.equals("MULTIPLAYER");
-        
-        // 核心：若有提供種子碼，則初始化固定的亂數產生器
+
+        // 提供種子碼時使用固定亂數序列，確保多人模式各端產生相同關卡
         if (seed != null) {
             this.random = new java.util.Random(seed);
         } else {
             this.random = new java.util.Random();
         }
-        
+
         this.hp = 5 + (player.hasArmor ? 5 : 0);
         this.remainingTime = 15.0 + (player.hasWaterVideo ? 20.0 : 0.0);
-        
-        // 無限制模式不消耗道具
+
+        // 無限制模式（練習／多人）不消耗玩家持有的道具
         if (!noLimits) {
             boolean usedItem = false;
             if (player.hasArmor) { player.hasArmor = false; usedItem = true; }
@@ -58,23 +73,28 @@ public class Game {
         }
     }
 
+    /**
+     * 執行遊戲主迴圈：逐關出題、讀取輸入、判斷對錯，
+     * 直到生命值耗盡、時間耗盡，或（非無盡模式時）抵達第 100 關為止。
+     */
     public void start() {
         while ((hp > 0 || noLimits) && (isEndless || currentLevel <= 100)) {
-            
+
+            // 首次進入特定關卡時顯示一次性教學提示
             if (currentLevel == 21 && !player.seenTutorial21) { showTutorial(21); player.seenTutorial21 = true; player.save(); }
             else if (currentLevel == 41 && !player.seenTutorial41) { showTutorial(41); player.seenTutorial41 = true; player.save(); }
             else if (currentLevel == 61 && !player.seenTutorial61) { showTutorial(61); player.seenTutorial61 = true; player.save(); }
             else if (currentLevel == 81 && !player.seenTutorial81) { showTutorial(81); player.seenTutorial81 = true; player.save(); }
-            
+
             Question q = new Question(currentLevel, isEndless, random);
             boolean isQuestionActive = true;
 
             while (isQuestionActive) {
                 UI.clearScreen();
-                
+
                 System.out.print(UI.BLUE + "第 " + currentLevel + (isEndless ? " 關 (無盡)" : " 關") + UI.RESET + " | ");
-                
-                // 動態切換無限制與普通顯示
+
+                // 無限制模式顯示固定的「無限」狀態列，其餘模式顯示實際血量、時間與金幣
                 if (noLimits) {
                     System.out.print(UI.RED + "血量: ∞" + UI.RESET + " | ");
                     System.out.printf(UI.YELLOW + "時間: ∞" + UI.RESET + " | ");
@@ -90,7 +110,7 @@ public class Game {
                     String coinDiffStr = lastCoinGained >= 0 ? "+" + lastCoinGained : String.valueOf(lastCoinGained);
                     System.out.println("| 金幣: " + player.coins + " (" + coinDiffStr + ")");
                 }
-                
+
                 System.out.println("--------------------------------------------------");
                 System.out.println("操作: 相同直接按 Enter | 不同按 ' 再按 Enter");
                 String functionText = "功能: 輸入 [ 暫停遊戲 | 輸入 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : "");
@@ -100,22 +120,23 @@ public class Game {
                 System.out.println(functionText);
                 System.out.println("--------------------------------------------------\n");
 
-                UI.displayQuestion(q); 
+                UI.displayQuestion(q);
 
                 long startTime = System.currentTimeMillis();
                 String input = Main.scanner.nextLine().trim().toLowerCase();
                 long endTime = System.currentTimeMillis();
-                
+
                 if (input.equals("[")) {
                     boolean continueGame = showPauseMenu();
                     if (continueGame) {
+                        // 防止玩家利用暫停偷看或重抽題目，繼續遊戲時強制重新出題
                         q = new Question(currentLevel, isEndless, random);
-                        continue; 
+                        continue;
                     } else {
                         finishRun(); return;
                     }
                 }
-                
+
                 if (input.equals("]")) {
                     finishRun(); return;
                 }
@@ -130,6 +151,7 @@ public class Game {
                     } else if (forbiddenJutsuActive) {
                         System.out.println(UI.PURPLE + "封印之書(禁術)已經在本輪遊戲中啟動。" + UI.RESET);
                     } else {
+                        // 啟動前的思考時間仍正常扣除，啟動後才開始凍結倒數
                         remainingTime -= elapsed;
                         if (remainingTime <= 0) {
                             System.out.println(UI.RED_BG + UI.WHITE + " 時間到！遊戲結束。 " + UI.RESET);
@@ -144,8 +166,8 @@ public class Game {
                     Main.scanner.nextLine();
                     continue;
                 }
-                
-                // --- 數據統計紀錄 ---
+
+                // 記錄本題作答數據，供結束後彙整進玩家的歷史統計
                 totalPlayTime += elapsed;
                 qCount++;
                 colorTotal[q.colorIndex]++;
@@ -172,22 +194,23 @@ public class Game {
                     player.skips--;
                     handleCorrect(elapsed);
                     correctCount++; colorCorrect[q.colorIndex]++; if(q.hasExclamation) reverseCorrect++;
-                    isQuestionActive = false; 
+                    isQuestionActive = false;
                 } else if ((isTrue && q.expectedAnswer) || (isFalse && !q.expectedAnswer)) {
                     handleCorrect(elapsed);
                     correctCount++; colorCorrect[q.colorIndex]++; if(q.hasExclamation) reverseCorrect++;
-                    isQuestionActive = false; 
+                    isQuestionActive = false;
                 } else {
                     handleWrong();
-                    isQuestionActive = false; 
+                    isQuestionActive = false;
                 }
             }
 
+            // 普通模式於存檔點關卡（20/40/60/80）通過後，解鎖對應的下一個存檔點
             if (!noLimits && !isEndless && (currentLevel == 20 || currentLevel == 40 || currentLevel == 60 || currentLevel == 80)) {
                 player.maxSavePoint = Math.max(player.maxSavePoint, currentLevel + 1);
                 player.save();
             }
-            
+
             currentLevel++;
         }
 
@@ -200,10 +223,11 @@ public class Game {
             }
             player.cleared100 = true;
         }
-        
+
         finishRun();
     }
 
+    /** 結束本局遊玩：彙整統計、檢查解鎖條件、顯示結算畫面並存檔。 */
     private void finishRun() {
         endPlaythrough();
         saveRunStats();
@@ -212,6 +236,12 @@ public class Game {
         player.save();
     }
 
+    /**
+     * 檢查玩家金幣是否已達封印之書(禁術)的解鎖門檻，
+     * 若為首次達標則揭曉其商店效果描述。
+     *
+     * @return 此次結算是否為首次達標
+     */
     private boolean revealForbiddenBookIfQualified() {
         if (!player.forbiddenBookRevealed && !player.hasForbiddenJutsu && player.coins >= Player.FORBIDDEN_BOOK_PRICE) {
             player.forbiddenBookRevealed = true;
@@ -220,6 +250,7 @@ public class Game {
         return false;
     }
 
+    /** 將本局統計數據累加進玩家對應遊戲模式的歷史統計。 */
     private void saveRunStats() {
         Player.ModeStats ms = player.getModeStats(mode);
         ms.totalPlayTime += this.totalPlayTime;
@@ -235,8 +266,16 @@ public class Game {
         ms.reverseTime += this.reverseTime;
     }
 
+    // 結算畫面左欄固定寬度，需大於最長結果文字的顯示寬度，避免右欄跑版
     private static final int RESULT_LEFT_COLUMN = 32;
 
+    /**
+     * 顯示結算畫面，採左右雙欄排版：左欄為本局結果摘要，
+     * 右欄為各顏色與反轉術式的詳細統計。
+     * 透過 {@link UI#padRight} 依顯示寬度補齊欄位，確保兩欄對齊。
+     *
+     * @param newlyQualified 玩家是否於本局首次達到封印之書(禁術)的解鎖門檻
+     */
     private void printRunStats(boolean newlyQualified) {
         UI.clearScreen();
 
@@ -289,14 +328,19 @@ public class Game {
             System.out.println(UI.YELLOW + "商店中的封印之書效果描述已揭曉。" + UI.RESET + "\n");
         }
 
+        // 結算畫面須按兩次 Enter 才會返回主選單，避免玩家連續按 Enter 而錯過結算內容
         System.out.println("請按 Enter 繼續...");
         Main.scanner.nextLine();
         System.out.println("再按一次 Enter 返回主選單...");
         Main.scanner.nextLine();
     }
 
+    /**
+     * 顯示指定關卡的教學提示畫面；顯示期間血量與計時皆維持不變。
+     *
+     * @param level 觸發教學的關卡數（21、41、61、81）
+     */
     private void showTutorial(int level) {
-        // [原有內容保持不變]
         UI.clearScreen();
         System.out.println(UI.CYAN + "---時間倒數暫停---" + UI.RESET);
         System.out.println(UI.YELLOW + "------遊戲提示------" + UI.RESET);
@@ -319,12 +363,17 @@ public class Game {
         } else if (level == 61) {
             System.out.println("【難度提升】視覺干擾！\n文字後方開始有機率出現隨機背景顏色，請專注文字，不要被干擾！");
         } else if (level == 81) {
-            System.out.println("【難度提升】時間緊迫！\n通關獎勵時間減少！每通過一關的獎勵時間將降為 +2 秒。");
+            System.out.println("【難度提升】時間緊迫！\n通關獎勵時間減少！每通過一關的獎勵時間將降為 +1.2 秒。");
         }
         System.out.println("\n按下Enter進入 " + level + " 關");
         Main.scanner.nextLine();
     }
 
+    /**
+     * 顯示暫停選單。
+     *
+     * @return 選擇繼續遊戲時為 true；選擇儲存並離開時為 false
+     */
     private boolean showPauseMenu() {
         while (true) {
             UI.clearScreen();
@@ -342,31 +391,41 @@ public class Game {
         }
     }
 
+    /**
+     * 處理答對的獎勵：恢復計時、發放金幣，並記錄供畫面顯示用的增減量。
+     *
+     * @param elapsed 本題作答耗時（秒）
+     */
     private void handleCorrect(double elapsed) {
         UI.playCorrectEffect();
         if (noLimits) return; // 無限制模式不計算獎勵
-        
-        double timeReward = (isEndless || currentLevel >= 80) ? 2.0 : 3.0;
+
+        // 80 關後與無盡模式的時間獎勵調降為 1.2 秒，其餘關卡為 1.4 秒
+        double timeReward = (isEndless || currentLevel >= 80) ? 1.2 : 1.4;
         if (!forbiddenJutsuActive) { remainingTime += timeReward; lastTimeDiff = timeReward - elapsed; }
-        else { lastTimeDiff = 0.0; }
+        else { lastTimeDiff = 0.0; } // 封印之書啟動中時間不流逝，不顯示時間差
 
         int coinReward = isEndless ? 5 : 1;
+        // 存檔點關卡（20/40/60/80）與通關（100）額外發放 10 金幣
         if (!isEndless && (currentLevel == 20 || currentLevel == 40 || currentLevel == 60 || currentLevel == 80 || currentLevel == 100)) coinReward = 10;
         player.coins += coinReward; lastCoinGained = coinReward;
         totalCoinChange += coinReward;
     }
 
+    /** 處理答錯的懲罰：扣除生命值，並依模式規則扣除金幣。 */
     private void handleWrong() {
         UI.playWrongEffect();
         if (noLimits) return; // 無限制模式不計算懲罰
-        
+
         hp--; lastTimeDiff = 0.0;
         if (isEndless && !endlessNoCoinLoss) {
+            // 扣款上限為玩家目前持有金幣，避免金幣變為負數
             int loss = Math.min(5, player.coins);
             player.coins -= loss; lastCoinGained = -loss;
             totalCoinChange -= loss;
         } else { lastCoinGained = 0; }
     }
-    
+
+    /** 結束遊玩時清除尚未使用的「全對」道具次數。 */
     private void endPlaythrough() { if (player.skips > 0) player.skips = 0; }
 }

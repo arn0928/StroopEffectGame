@@ -1,24 +1,37 @@
 package stroopeffectgame;
 
+/**
+ * 終端機畫面輸出的共用工具：ANSI 顏色代碼、考慮全角字寬與顏色碼長度的
+ * 文字欄位對齊，以及畫面清除、出題排版與答題特效顯示。
+ */
 public class UI {
-    public static final String RESET = "\u001B[0m";
-    public static final String RED = "\u001B[31;1m";
-    public static final String YELLOW = "\u001B[33;1m";
-    public static final String BLUE = "\u001B[94;1m";
-    public static final String GREEN = "\u001B[32;1m";
-    public static final String PURPLE = "\u001B[35;1m";
-    public static final String PINK = "\u001B[1;38;5;206m";
-    // 補回介面排版需要的 CYAN (青色)
-    public static final String CYAN = "\u001B[36;1m";
-    public static final String WHITE = "\u001B[37;1m";
+    // 文字顏色
+    public static final String RESET = "[0m";
+    public static final String RED = "[31;1m";
+    public static final String YELLOW = "[33;1m";
+    public static final String BLUE = "[94;1m";
+    public static final String GREEN = "[32;1m";
+    public static final String PURPLE = "[35;1m";
+    public static final String PINK = "[1;38;5;206m";
+    public static final String CYAN = "[36;1m";
+    public static final String WHITE = "[37;1m";
 
-    public static final String RED_BG = "\u001B[41m";
-    public static final String YELLOW_BG = "\u001B[43m";
-    public static final String BLUE_BG = "\u001B[104m";
-    public static final String GREEN_BG = "\u001B[42m";
-    public static final String PURPLE_BG = "\u001B[45m";
-    public static final String PINK_BG = "\u001B[48;5;206m";
+    // 背景顏色
+    public static final String RED_BG = "[41m";
+    public static final String YELLOW_BG = "[43m";
+    public static final String BLUE_BG = "[104m";
+    public static final String GREEN_BG = "[42m";
+    public static final String PURPLE_BG = "[45m";
+    public static final String PINK_BG = "[48;5;206m";
 
+    /**
+     * 將文字右側補上空白至指定顯示寬度，供多欄排版對齊使用。
+     * 寬度計算會排除 ANSI 顏色碼並將全角字元視為兩個字元寬。
+     *
+     * @param text  欲補齊的文字，可包含 ANSI 顏色碼
+     * @param width 目標顯示寬度
+     * @return 補齊空白後的文字；若原文字已達到或超過目標寬度，僅補一個空白作為欄位間隔
+     */
     public static String padRight(String text, int width) {
         int padding = width - visibleWidth(text);
         if (padding <= 0) return text + " ";
@@ -27,8 +40,15 @@ public class UI {
         return sb.toString();
     }
 
+    /**
+     * 計算文字在終端機上的實際顯示寬度：先移除 ANSI 顏色碼（不佔顯示寬度），
+     * 再將全角字元（中文、全角符號等）計為 2，其餘字元計為 1。
+     *
+     * @param text 欲計算寬度的文字，可包含 ANSI 顏色碼
+     * @return 文字的顯示寬度
+     */
     public static int visibleWidth(String text) {
-        String plain = text.replaceAll("\\[[;\\d]*m", "");
+        String plain = text.replaceAll(java.util.regex.Pattern.quote(String.valueOf((char) 27) + "[") + "[0-9;]*m", "");
         int width = 0;
         for (int i = 0; i < plain.length(); ) {
             int cp = plain.codePointAt(i);
@@ -38,6 +58,7 @@ public class UI {
         return width;
     }
 
+    /** 判斷字元是否屬於需以雙倍寬度顯示的全角字元（CJK 文字、全角符號、假名、韓文等）。 */
     private static boolean isWideCodePoint(int cp) {
         Character.UnicodeBlock block = Character.UnicodeBlock.of(cp);
         return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
@@ -50,11 +71,13 @@ public class UI {
             || block == Character.UnicodeBlock.HANGUL_SYLLABLES;
     }
 
+    /** 清除終端機畫面內容，將游標移回左上角。 */
     public static void clearScreen() {
         System.out.print("\033[H\033[2J");
         System.out.flush();
     }
 
+    /** 將題目以指定的文字顏色與背景顏色排版顯示於畫面中央。 */
     public static void displayQuestion(Question q) {
         String pad = q.hasExclamation ? "！" : " ";
         String displayText = pad + q.word + pad;
@@ -65,6 +88,7 @@ public class UI {
         System.out.println("\n(輸入答案並按 Enter)");
     }
 
+    /** 播放答對時的提示音與畫面特效，並短暫停頓讓玩家確認結果。 */
     public static void playCorrectEffect() {
         try {
             System.out.print("\007");
@@ -76,6 +100,7 @@ public class UI {
         }
     }
 
+    /** 播放答錯時的提示音與畫面特效，並短暫停頓讓玩家確認結果。 */
     public static void playWrongEffect() {
         try {
             System.out.print("\007");

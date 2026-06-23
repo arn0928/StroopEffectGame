@@ -7,22 +7,22 @@ package stroopeffectgame;
 public class UI {
     // 文字顏色
     public static final String RESET = "[0m";
-    public static final String RED = "[31;1m";
-    public static final String YELLOW = "[33;1m";
-    public static final String BLUE = "[94;1m";
-    public static final String GREEN = "[32;1m";
-    public static final String PURPLE = "[35;1m";
-    public static final String PINK = "[95;1m";
-    public static final String CYAN = "[36;1m";
-    public static final String WHITE = "[37;1m";
+    public static final String RED = "[1;38;2;255;85;85m";
+    public static final String YELLOW = "[1;38;2;255;220;60m";
+    public static final String BLUE = "[1;38;2;90;160;255m";
+    public static final String GREEN = "[1;38;2;90;230;90m";
+    public static final String PURPLE = "[1;38;2;190;90;255m";
+    public static final String PINK = "[1;38;2;255;110;190m";
+    public static final String CYAN = "[1;38;2;60;220;220m";
+    public static final String WHITE = "[1;38;2;255;255;255m";
 
     // 背景顏色
-    public static final String RED_BG = "[41m";
-    public static final String YELLOW_BG = "[43m";
-    public static final String BLUE_BG = "[104m";
-    public static final String GREEN_BG = "[42m";
-    public static final String PURPLE_BG = "[45m";
-    public static final String PINK_BG = "[105m";
+    public static final String RED_BG = "[48;2;140;20;20m";
+    public static final String YELLOW_BG = "[48;2;150;130;0m";
+    public static final String BLUE_BG = "[48;2;20;60;140m";
+    public static final String GREEN_BG = "[48;2;20;110;20m";
+    public static final String PURPLE_BG = "[48;2;90;20;140m";
+    public static final String PINK_BG = "[48;2;150;40;110m";
 
     /**
      * 將文字右側補上空白至指定顯示寬度，供多欄排版對齊使用。

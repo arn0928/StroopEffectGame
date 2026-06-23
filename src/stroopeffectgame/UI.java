@@ -12,7 +12,7 @@ public class UI {
     public static final String BLUE = "[94;1m";
     public static final String GREEN = "[32;1m";
     public static final String PURPLE = "[35;1m";
-    public static final String PINK = "[1;38;5;206m";
+    public static final String PINK = "[95;1m";
     public static final String CYAN = "[36;1m";
     public static final String WHITE = "[37;1m";
 
@@ -22,7 +22,7 @@ public class UI {
     public static final String BLUE_BG = "[104m";
     public static final String GREEN_BG = "[42m";
     public static final String PURPLE_BG = "[45m";
-    public static final String PINK_BG = "[48;5;206m";
+    public static final String PINK_BG = "[105m";
 
     /**
      * 將文字右側補上空白至指定顯示寬度，供多欄排版對齊使用。

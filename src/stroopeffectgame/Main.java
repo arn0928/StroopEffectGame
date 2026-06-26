@@ -1,21 +1,23 @@
 package stroopeffectgame;
 
 import java.util.Scanner;
+import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.NonBlockingReader;
 
 public class Main {
+    // 商店購買、刪除存檔確認、種子碼與多位數關卡輸入仍用 scanner（cooked/line mode），
+    // 因為這幾處天生需要打多個字元或需要刻意按 Enter 確認危險操作。
     public static final Scanner scanner = new Scanner(System.in);
 
-    // 供答題迴圈讀取單一按鍵（不需按 Enter）使用的終端機物件，與 scanner 共用同一個主控台。
-    // 選單一律仍用 scanner（cooked/line mode），只有答題迴圈會切到這個 terminal 的 raw mode，
-    // 避免 JLine 自己的 LineReader 弄亂底層 NonBlockingReader 的狀態而導致答題讀不到按鍵。
+    // 其餘選單與答題迴圈共用這個 terminal 讀取單一按鍵（不需按 Enter）。
     public static final Terminal terminal;
     static {
         try {
             terminal = TerminalBuilder.builder().system(true).build();
         } catch (java.io.IOException e) {
-            throw new RuntimeException("無法初始化終端機，單鍵答題功能將無法使用。", e);
+            throw new RuntimeException("無法初始化終端機，單鍵選單功能將無法使用。", e);
         }
     }
 
@@ -23,6 +25,34 @@ public class Main {
     private static final int RIGHT_INFO_COLUMN = 32;
     private static final int SHOP_EFFECT_COLUMN = 26;
     private static final int SHOP_PRICE_COLUMN = 76;
+
+    /**
+     * 讀取玩家按下的單一按鍵，不需按 Enter 即可立即送出。
+     * <p>
+     * 刻意使用帶逾時的 {@code read(timeout)} 並以迴圈反覆呼叫，而非無參數、永久阻塞的
+     * {@code read()}：背景讀取執行緒在 {@code enterRawMode()} 剛切換完時可能尚未就緒，
+     * 無參數的 {@code read()} 會直接卡在等待通知而永遠收不到資料；帶逾時的輪詢則會反覆
+     * 喚醒讀取，讓背景執行緒有機會把按鍵送出來。
+     *
+     * @return 按下的按鍵字元（小寫）；按下 Enter 或讀取失敗時回傳空字串
+     */
+    public static String readSingleKey() {
+        Attributes savedAttributes = terminal.enterRawMode();
+        try {
+            NonBlockingReader reader = terminal.reader();
+            int c;
+            do {
+                c = reader.read(200);
+            } while (c == NonBlockingReader.READ_EXPIRED);
+
+            if (c == '\r' || c == '\n' || c == -1) return "";
+            return String.valueOf((char) c).toLowerCase();
+        } catch (java.io.IOException e) {
+            return "";
+        } finally {
+            terminal.setAttributes(savedAttributes);
+        }
+    }
 
     public static void main(String[] args) {
         player = Player.load();
@@ -48,16 +78,16 @@ public class Main {
             System.out.println("9. 離開並存檔");
             System.out.print("\n請輸入選項: ");
 
-            String input = scanner.nextLine().trim();
+            String input = readSingleKey();
             switch (input) {
                 case "1": new Game(player, 1, false, "NORMAL", null).start(); break;
                 case "2":
                     if (player.maxSavePoint >= 21) selectSavePoint();
-                    else { System.out.println("您尚未解鎖任何存檔點！請按 Enter 繼續..."); scanner.nextLine(); }
+                    else { System.out.println("您尚未解鎖任何存檔點！請按任意鍵繼續..."); readSingleKey(); }
                     break;
                 case "3":
                     if (player.cleared100) new Game(player, 1, true, "ENDLESS", null).start();
-                    else { System.out.println("必須先通關 100 關！請按 Enter 繼續..."); scanner.nextLine(); }
+                    else { System.out.println("必須先通關 100 關！請按任意鍵繼續..."); readSingleKey(); }
                     break;
                 case "4": openShop(); break;
                 case "5": setupCustomGame("MULTIPLAYER"); break;
@@ -67,9 +97,9 @@ public class Main {
                     System.out.print(UI.RED + "確定要刪除存檔嗎？(y/n): " + UI.RESET);
                     if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
                         new java.io.File("savegame.dat").delete();
-                        player = new Player(); 
-                        System.out.println(UI.GREEN + "\n存檔已成功刪除！請按 Enter 返回主選單..." + UI.RESET);
-                        scanner.nextLine();
+                        player = new Player();
+                        System.out.println(UI.GREEN + "\n存檔已成功刪除！請按任意鍵返回主選單..." + UI.RESET);
+                        readSingleKey();
                     }
                     break;
                 case "9":
@@ -78,14 +108,14 @@ public class Main {
                     try { terminal.close(); } catch (java.io.IOException ignored) {}
                     System.exit(0);
                     break;
-                case "99":
+                case "d":
                     player.cleared100 = true; player.maxSavePoint = 81; player.coins += 10000; player.forbiddenBookRevealed = true; player.save();
-                    System.out.println(UI.PURPLE + "\n【密技】已強制解鎖並獲得金幣！請按 Enter 繼續..." + UI.RESET);
-                    scanner.nextLine();
+                    System.out.println(UI.PURPLE + "\n【開發者模式】已強制解鎖並獲得金幣！請按任意鍵繼續..." + UI.RESET);
+                    readSingleKey();
                     break;
                 default:
-                    System.out.println("無效的選項！請按 Enter 繼續...");
-                    scanner.nextLine();
+                    System.out.println("無效的選項！請按任意鍵繼續...");
+                    readSingleKey();
             }
         }
     }
@@ -109,10 +139,10 @@ public class Main {
         System.out.println("0. 返回主選單");
         System.out.print("\n請選擇: ");
         
-        String choice = scanner.nextLine().trim();
+        String choice = readSingleKey();
         int startLevel = 1;
         boolean isEndless = false;
-        
+
         if (choice.equals("0")) return;
         if (choice.equals("2")) {
             if (player.maxSavePoint >= 21) {
@@ -120,11 +150,11 @@ public class Main {
                 try {
                     int lvl = Integer.parseInt(scanner.nextLine().trim());
                     if ((lvl==21 || lvl==41 || lvl==61 || lvl==81) && lvl <= player.maxSavePoint) startLevel = lvl;
-                    else { System.out.println("解鎖不足或無效關卡！按 Enter 返回..."); scanner.nextLine(); return; }
-                } catch (Exception e) { System.out.println("輸入無效！按 Enter 返回..."); scanner.nextLine(); return; }
-            } else { System.out.println("尚未解鎖存檔點！按 Enter 返回..."); scanner.nextLine(); return; }
+                    else { System.out.println("解鎖不足或無效關卡！請按任意鍵返回..."); readSingleKey(); return; }
+                } catch (Exception e) { System.out.println("輸入無效！請按任意鍵返回..."); readSingleKey(); return; }
+            } else { System.out.println("尚未解鎖存檔點！請按任意鍵返回..."); readSingleKey(); return; }
         } else if (choice.equals("3")) isEndless = true;
-        else if (!choice.equals("1")) { System.out.println("無效選擇！按 Enter 返回..."); scanner.nextLine(); return; }
+        else if (!choice.equals("1")) { System.out.println("無效選擇！請按任意鍵返回..."); readSingleKey(); return; }
         
         Long seed = null;
         if (mode.equals("MULTIPLAYER")) {
@@ -149,9 +179,9 @@ public class Main {
             System.out.println("0. 返回主選單");
             System.out.print("\n請選擇要查看的模式: ");
             
-            String input = scanner.nextLine().trim();
+            String input = readSingleKey();
             if (input.equals("0")) break;
-            
+
             String mode = ""; String modeName = "";
             switch(input) {
                 case "1": mode = "NORMAL"; modeName = "普通模式"; break;
@@ -184,7 +214,7 @@ public class Main {
             double rAvg = ms.reverseTotal > 0 ? (ms.reverseTime / ms.reverseTotal) : 0;
             System.out.printf("正確率 %d/%d (%.1f%%) | 平均 %.2f 秒\n\n", ms.reverseCorrect, ms.reverseTotal, rAcc, rAvg);
             
-            System.out.println("請按 Enter 返回..."); scanner.nextLine();
+            System.out.println("請按任意鍵返回..."); readSingleKey();
         }
     }
 
@@ -198,7 +228,7 @@ public class Main {
             if (player.maxSavePoint >= 81) System.out.println("4. 從第 81 關開始");
             System.out.println("0. 返回");
             System.out.print("\n請選擇: ");
-            String input = scanner.nextLine().trim();
+            String input = readSingleKey();
             if (input.equals("0")) break;
             
             int startLevel = 0;
@@ -208,8 +238,8 @@ public class Main {
                 case "3": if (player.maxSavePoint >= 61) startLevel = 61; break;
                 case "4": if (player.maxSavePoint >= 81) startLevel = 81; break;
             }
-            if (startLevel > 0) { new Game(player, startLevel, false, "NORMAL", null).start(); break; } 
-            else { System.out.println("無效的選項！請按 Enter 繼續..."); scanner.nextLine(); }
+            if (startLevel > 0) { new Game(player, startLevel, false, "NORMAL", null).start(); break; }
+            else { System.out.println("無效的選項！請按任意鍵繼續..."); readSingleKey(); }
         }
     }
 
@@ -223,7 +253,7 @@ public class Main {
                 "[單次生效 | 血量 +5" + (player.hasArmor ? " | 已裝備" : "") + "]",
                 "20 金幣");
             printShopRow("2. " + UI.GREEN + "全對" + UI.RESET,
-                "[單次生效 | 按 \\ 通過目前關卡，可用 5 次" + (player.skips > 0 ? " | 已裝備 " + player.skips + " 次" : "") + "]",
+                "[單次生效 | 按 5 通過目前關卡，可用 5 次" + (player.skips > 0 ? " | 已裝備 " + player.skips + " 次" : "") + "]",
                 "40 金幣");
             printShopRow("3. " + UI.YELLOW + "水影片" + UI.RESET,
                 "[單次生效 | 初始遊戲時間 +20 秒" + (player.hasWaterVideo ? " | 已裝備" : "") + "]",
@@ -243,7 +273,7 @@ public class Main {
             String forbiddenPrice = Player.FORBIDDEN_BOOK_PRICE + " 金幣" + (player.hasForbiddenJutsu ? " (已購買)" : "");
             if (showForbiddenBookDetail) {
                 printShopRow("5. " + UI.PURPLE + "封印之書(禁術)" + UI.RESET,
-                    "[" + (player.hasForbiddenJutsu ? "已購買" : "可購買") + " | 輸入 = 啟動該輪時間暫停]",
+                    "[" + (player.hasForbiddenJutsu ? "已購買" : "可購買") + " | 按 6 啟動該輪時間暫停]",
                     forbiddenPrice);
             } else {
                 printShopRow("5. " + UI.PURPLE + "封印之書(禁術)" + UI.RESET,

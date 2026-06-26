@@ -85,7 +85,7 @@ public class UI {
         System.out.println(q.bgColorCode + q.fgColorCode + "                  " + RESET);
         System.out.println(q.bgColorCode + q.fgColorCode + "      " + displayText + "      " + RESET);
         System.out.println(q.bgColorCode + q.fgColorCode + "                  " + RESET);
-        System.out.println("\n(輸入答案並按 Enter)");
+        System.out.println();
     }
 
     /** 播放答對時的提示音與畫面特效，並短暫停頓讓玩家確認結果。 */

@@ -112,10 +112,10 @@ public class Game {
                 }
 
                 System.out.println("--------------------------------------------------");
-                System.out.println("操作: 相同按 Enter | 不同按 '");
-                String functionText = "功能: 按 [ 暫停遊戲 | 按 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : "");
+                System.out.println("操作: 按 1 表示相同 | 按 2 表示不同");
+                String functionText = "功能: 按 3 暫停遊戲 | 按 4 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 5 使用全對" : "");
                 if (player.hasForbiddenJutsu && !noLimits) {
-                    functionText += forbiddenJutsuActive ? " | 封印之書(禁術)已啟動" : " | 按 = 啟動封印之書(禁術)";
+                    functionText += forbiddenJutsuActive ? " | 封印之書(禁術)已啟動" : " | 按 6 啟動封印之書(禁術)";
                 }
                 System.out.println(functionText);
                 System.out.println("--------------------------------------------------\n");
@@ -123,10 +123,10 @@ public class Game {
                 UI.displayQuestion(q);
 
                 long startTime = System.currentTimeMillis();
-                String input = readSingleKeyInput();
+                String input = Main.readSingleKey();
                 long endTime = System.currentTimeMillis();
 
-                if (input.equals("[")) {
+                if (input.equals("3")) {
                     boolean continueGame = showPauseMenu();
                     if (continueGame) {
                         // 防止玩家利用暫停偷看或重抽題目，繼續遊戲時強制重新出題
@@ -137,13 +137,13 @@ public class Game {
                     }
                 }
 
-                if (input.equals("]")) {
+                if (input.equals("4")) {
                     finishRun(); return;
                 }
 
                 double elapsed = (endTime - startTime) / 1000.0;
 
-                if (input.equals("=")) {
+                if (input.equals("6")) {
                     if (noLimits) {
                         System.out.println(UI.PURPLE + "無限制模式不需要啟動封印之書(禁術)。" + UI.RESET);
                     } else if (!player.hasForbiddenJutsu) {
@@ -162,8 +162,8 @@ public class Game {
                         lastCoinGained = 0;
                         System.out.println(UI.PURPLE + "封印之書(禁術)啟動！本輪遊戲時間停止流逝。" + UI.RESET);
                     }
-                    System.out.println("請按 Enter 繼續...");
-                    Main.scanner.nextLine();
+                    System.out.println("請按任意鍵繼續...");
+                    Main.readSingleKey();
                     continue;
                 }
 
@@ -186,9 +186,9 @@ public class Game {
                     finishRun(); return;
                 }
 
-                boolean isTrue = input.equals("");
-                boolean isFalse = input.equals("'");
-                boolean useSkip = input.equals("\\") && player.skips > 0 && !noLimits;
+                boolean isTrue = input.equals("1");
+                boolean isFalse = input.equals("2");
+                boolean useSkip = input.equals("5") && player.skips > 0 && !noLimits;
 
                 if (useSkip) {
                     player.skips--;
@@ -328,11 +328,11 @@ public class Game {
             System.out.println(UI.YELLOW + "商店中的封印之書效果描述已揭曉。" + UI.RESET + "\n");
         }
 
-        // 結算畫面須按兩次 Enter 才會返回主選單，避免玩家連續按 Enter 而錯過結算內容
-        System.out.println("請按 Enter 繼續...");
-        Main.scanner.nextLine();
-        System.out.println("再按一次 Enter 返回主選單...");
-        Main.scanner.nextLine();
+        // 結算畫面須按兩次 1 才會返回主選單，避免玩家連續按鍵而錯過結算內容
+        System.out.println("請按 1 繼續...");
+        while (!Main.readSingleKey().equals("1")) { /* 等待玩家按下 1 */ }
+        System.out.println("再按一次 1 返回主選單...");
+        while (!Main.readSingleKey().equals("1")) { /* 等待玩家按下 1 */ }
     }
 
     /**
@@ -359,48 +359,14 @@ public class Game {
             int wIdx = random.nextInt(6);
             int cIdx; do { cIdx = random.nextInt(6); } while(cIdx == wIdx);
             String exampleText = fgs[cIdx] + "！" + words[wIdx] + "！" + UI.RESET;
-            System.out.println("例如：" + exampleText + " (顯示為" + words[cIdx] + "色的「" + words[wIdx] + "」字)，需按下Enter");
+            System.out.println("例如：" + exampleText + " (顯示為" + words[cIdx] + "色的「" + words[wIdx] + "」字)，需按下 1");
         } else if (level == 61) {
             System.out.println("【難度提升】視覺干擾！\n文字後方開始有機率出現隨機背景顏色，請專注文字，不要被干擾！");
         } else if (level == 81) {
             System.out.println("【難度提升】時間緊迫！\n通關獎勵時間減少！每通過一關的獎勵時間將降為 +1.2 秒。");
         }
-        System.out.println("\n按下Enter進入 " + level + " 關");
-        Main.scanner.nextLine();
-    }
-
-    /**
-     * 讀取玩家按下的單一按鍵，不需按 Enter 即可立即送出，加快答題節奏。
-     * <p>
-     * 透過 JLine 暫時將終端機切換為 raw mode 讀取一個字元，讀取完畢後立即還原為一般模式，
-     * 避免影響選單等其餘仍使用 {@link Main#scanner} 的輸入。
-     * <p>
-     * 刻意使用帶逾時的 {@code read(timeout)} 並以迴圈反覆呼叫，而非無參數、永久阻塞的
-     * {@code read()}：背景讀取執行緒在 {@code enterRawMode()} 剛切換完時可能尚未就緒，
-     * 無參數的 {@code read()} 會直接卡在等待通知而永遠收不到資料；帶逾時的輪詢則會反覆
-     * 喚醒讀取，讓背景執行緒有機會把按鍵送出來。這個寫法已實際在使用者環境
-     * （{@code NativeWinSysTerminal} / {@code windows-vtp}）驗證過可以正確收到按鍵。
-     * 按下 Enter（'\r' 或 '\n'）視為空字串，語意與原本「直接按 Enter＝相同」一致。
-     *
-     * @return 按下的按鍵字元（小寫）；按下 Enter 或讀取失敗時回傳空字串
-     */
-    private String readSingleKeyInput() {
-        org.jline.terminal.Terminal terminal = Main.terminal;
-        org.jline.terminal.Attributes savedAttributes = terminal.enterRawMode();
-        try {
-            org.jline.utils.NonBlockingReader reader = terminal.reader();
-            int c;
-            do {
-                c = reader.read(200);
-            } while (c == org.jline.utils.NonBlockingReader.READ_EXPIRED);
-
-            if (c == '\r' || c == '\n' || c == -1) return "";
-            return String.valueOf((char) c).toLowerCase();
-        } catch (java.io.IOException e) {
-            return "";
-        } finally {
-            terminal.setAttributes(savedAttributes);
-        }
+        System.out.println("\n按任意鍵進入 " + level + " 關");
+        Main.readSingleKey();
     }
 
     /**
@@ -419,7 +385,7 @@ public class Game {
             System.out.println("1. 繼續遊戲 (重製當前關卡題目)");
             System.out.println("2. 儲存並離開遊戲 (未使用的全對道具將會消失)");
             System.out.print("\n請選擇操作: ");
-            String choice = Main.scanner.nextLine().trim();
+            String choice = Main.readSingleKey();
             if (choice.equals("1")) return true;
             else if (choice.equals("2")) return false;
         }

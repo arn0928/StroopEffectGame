@@ -1,9 +1,22 @@
 package stroopeffectgame;
 
 import java.util.Scanner;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 public class Main {
     public static final Scanner scanner = new Scanner(System.in);
+
+    // 供答題迴圈讀取單一按鍵（不需按 Enter）使用的終端機物件，與 scanner 共用同一個主控台
+    public static final Terminal terminal;
+    static {
+        try {
+            terminal = TerminalBuilder.builder().system(true).build();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("無法初始化終端機，單鍵答題功能將無法使用。", e);
+        }
+    }
+
     private static Player player;
     private static final int RIGHT_INFO_COLUMN = 32;
     private static final int SHOP_EFFECT_COLUMN = 26;
@@ -57,7 +70,12 @@ public class Main {
                         scanner.nextLine();
                     }
                     break;
-                case "9": player.save(); System.out.println("感謝遊玩！"); System.exit(0); break;
+                case "9":
+                    player.save();
+                    System.out.println("感謝遊玩！");
+                    try { terminal.close(); } catch (java.io.IOException ignored) {}
+                    System.exit(0);
+                    break;
                 case "99":
                     player.cleared100 = true; player.maxSavePoint = 81; player.coins += 10000; player.forbiddenBookRevealed = true; player.save();
                     System.out.println(UI.PURPLE + "\n【密技】已強制解鎖並獲得金幣！請按 Enter 繼續..." + UI.RESET);

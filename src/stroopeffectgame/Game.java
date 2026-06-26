@@ -112,10 +112,10 @@ public class Game {
                 }
 
                 System.out.println("--------------------------------------------------");
-                System.out.println("操作: 相同直接按 Enter | 不同按 ' 再按 Enter");
-                String functionText = "功能: 輸入 [ 暫停遊戲 | 輸入 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : "");
+                System.out.println("操作: 相同按 Enter | 不同按 '");
+                String functionText = "功能: 按 [ 暫停遊戲 | 按 ] 儲存並退出" + ((player.skips > 0 && !noLimits) ? " | 按 \\ 使用全對" : "");
                 if (player.hasForbiddenJutsu && !noLimits) {
-                    functionText += forbiddenJutsuActive ? " | 封印之書(禁術)已啟動" : " | 輸入 = 啟動封印之書(禁術)";
+                    functionText += forbiddenJutsuActive ? " | 封印之書(禁術)已啟動" : " | 按 = 啟動封印之書(禁術)";
                 }
                 System.out.println(functionText);
                 System.out.println("--------------------------------------------------\n");
@@ -123,7 +123,7 @@ public class Game {
                 UI.displayQuestion(q);
 
                 long startTime = System.currentTimeMillis();
-                String input = Main.scanner.nextLine().trim().toLowerCase();
+                String input = readSingleKeyInput();
                 long endTime = System.currentTimeMillis();
 
                 if (input.equals("[")) {
@@ -367,6 +367,32 @@ public class Game {
         }
         System.out.println("\n按下Enter進入 " + level + " 關");
         Main.scanner.nextLine();
+    }
+
+    /**
+     * 讀取玩家按下的單一按鍵，不需按 Enter 即可立即送出，加快答題節奏。
+     * <p>
+     * 透過 JLine 暫時將終端機切換為 raw mode（關閉行緩衝與自動回顯）讀取一個字元，
+     * 讀取完畢後立即還原為一般模式，避免影響選單等其餘仍使用 {@link Main#scanner} 的輸入。
+     * 按下 Enter（'\r' 或 '\n'）視為空字串，語意與原本「直接按 Enter＝相同」一致。
+     *
+     * @return 按下的按鍵字元（小寫）；按下 Enter 或讀取失敗時回傳空字串
+     */
+    private String readSingleKeyInput() {
+        org.jline.terminal.Terminal terminal = Main.terminal;
+        org.jline.terminal.Attributes savedAttributes = terminal.enterRawMode();
+        try {
+            org.jline.utils.NonBlockingReader reader = terminal.reader();
+            int c = reader.read();
+            // 清掉同時抵達的多餘按鍵（例如手誤多按的 Enter），避免殘留輸入污染下一題
+            while (reader.peek(0) >= 0) reader.read(0);
+            if (c == '\r' || c == '\n' || c == -1) return "";
+            return String.valueOf((char) c).toLowerCase();
+        } catch (java.io.IOException e) {
+            return "";
+        } finally {
+            terminal.setAttributes(savedAttributes);
+        }
     }
 
     /**

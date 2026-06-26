@@ -7,7 +7,9 @@ import org.jline.terminal.TerminalBuilder;
 public class Main {
     public static final Scanner scanner = new Scanner(System.in);
 
-    // 供答題迴圈讀取單一按鍵（不需按 Enter）使用的終端機物件，與 scanner 共用同一個主控台
+    // 供答題迴圈讀取單一按鍵（不需按 Enter）使用的終端機物件，與 scanner 共用同一個主控台。
+    // 選單一律仍用 scanner（cooked/line mode），只有答題迴圈會切到這個 terminal 的 raw mode，
+    // 避免 JLine 自己的 LineReader 弄亂底層 NonBlockingReader 的狀態而導致答題讀不到按鍵。
     public static final Terminal terminal;
     static {
         try {

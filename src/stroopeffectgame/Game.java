@@ -372,8 +372,14 @@ public class Game {
     /**
      * 讀取玩家按下的單一按鍵，不需按 Enter 即可立即送出，加快答題節奏。
      * <p>
-     * 透過 JLine 暫時將終端機切換為 raw mode（關閉行緩衝與自動回顯）讀取一個字元，
-     * 讀取完畢後立即還原為一般模式，避免影響選單等其餘仍使用 {@link Main#scanner} 的輸入。
+     * 透過 JLine 暫時將終端機切換為 raw mode 讀取一個字元，讀取完畢後立即還原為一般模式，
+     * 避免影響選單等其餘仍使用 {@link Main#scanner} 的輸入。
+     * <p>
+     * 刻意使用帶逾時的 {@code read(timeout)} 並以迴圈反覆呼叫，而非無參數、永久阻塞的
+     * {@code read()}：背景讀取執行緒在 {@code enterRawMode()} 剛切換完時可能尚未就緒，
+     * 無參數的 {@code read()} 會直接卡在等待通知而永遠收不到資料；帶逾時的輪詢則會反覆
+     * 喚醒讀取，讓背景執行緒有機會把按鍵送出來。這個寫法已實際在使用者環境
+     * （{@code NativeWinSysTerminal} / {@code windows-vtp}）驗證過可以正確收到按鍵。
      * 按下 Enter（'\r' 或 '\n'）視為空字串，語意與原本「直接按 Enter＝相同」一致。
      *
      * @return 按下的按鍵字元（小寫）；按下 Enter 或讀取失敗時回傳空字串
@@ -383,9 +389,11 @@ public class Game {
         org.jline.terminal.Attributes savedAttributes = terminal.enterRawMode();
         try {
             org.jline.utils.NonBlockingReader reader = terminal.reader();
-            int c = reader.read();
-            // 清掉同時抵達的多餘按鍵（例如手誤多按的 Enter），避免殘留輸入污染下一題
-            while (reader.peek(0) >= 0) reader.read(0);
+            int c;
+            do {
+                c = reader.read(200);
+            } while (c == org.jline.utils.NonBlockingReader.READ_EXPIRED);
+
             if (c == '\r' || c == '\n' || c == -1) return "";
             return String.valueOf((char) c).toLowerCase();
         } catch (java.io.IOException e) {
